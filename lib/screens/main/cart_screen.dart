@@ -156,22 +156,50 @@ class _CartScreenState extends State<CartScreen> {
                           : () async {
                               if (cart.lines.isEmpty) return;
                               setState(() => _isPaying = true);
+
+                              // For now: create ONE order per restaurant group.
+                              // (Tracking will still show only one active order until OrderProvider is upgraded.)
+                              final groups = <String, List<CartLine>>{};
+                              for (final line in cart.lines) {
+                                groups.putIfAbsent(line.restaurantName, () => []).add(line);
+                              }
+
                               await Future.delayed(const Duration(seconds: 3));
-                              final order = FoodOrder(
-                                id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
-                                restaurantName: cart.lines.first.restaurantName,
-                                items: cart.lines.map((line) => line.item.name).toList(),
-                                total: cart.total,
-                                orderedAt: DateTime.now(),
-                                deliveryAddress: loc.displayAddress,
-                                status: 'Placed',
-                              );
-                              await context.read<ProfileProvider>().addOrder(order);
-                              await context.read<LocationProvider>().setLastOrderAddress(loc.displayAddress);
-                              await context.read<OrderProvider>().placeOrder(order);
+
+                              final orders = groups.entries.map((e) {
+                                final restaurantName = e.key;
+                                final items = e.value.map((line) => line.item.name).toList();
+                                // Simple distribution: each sub-order total uses full cart.total for MVP.
+                                // Later we will calculate per-restaurant totals (delivery/packing fees distribution).
+                                return FoodOrder(
+                                  id: 'ord-${DateTime.now().millisecondsSinceEpoch}-${restaurantName.hashCode}',
+                                  restaurantName: restaurantName,
+                                  items: items,
+                                  total: cart.total,
+                                  orderedAt: DateTime.now(),
+                                  deliveryAddress: loc.displayAddress,
+                                  status: 'Placed',
+                                );
+                              }).toList();
+
+                              for (final order in orders) {
+                                await context.read<ProfileProvider>().addOrder(order);
+                              }
+
+                              await context
+                                  .read<LocationProvider>()
+                                  .setLastOrderAddress(loc.displayAddress);
+
+                              // MVP: place the first order as the active tracking order.
+                              // Next step will upgrade multi-order tracking.
+                              if (orders.isNotEmpty) {
+                                await context.read<OrderProvider>().placeOrder(orders.first);
+                              }
+
                               cart.clear();
                               if (!mounted) return;
                               setState(() => _isPaying = false);
+
                               Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(builder: (_) => const TrackingScreen()),

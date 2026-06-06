@@ -37,6 +37,11 @@ class CartProvider extends ChangeNotifier {
 
   int get plasticSaved => noCutlery ? 8 : 0;
 
+  /// List of distinct restaurants present in the cart.
+  Set<String> get restaurantNames =>
+      _lines.values.map((l) => l.restaurantName).toSet();
+
+
   void add(
     MenuItem item,
     String restaurantName, {
@@ -44,9 +49,19 @@ class CartProvider extends ChangeNotifier {
     List<String> toppings = const [],
     String spiceLevel = 'Medium',
     int quantity = 1,
+    bool clearExisting = false,
   }) {
-    final key = '${item.id}|$size|${toppings.join(',')}|$spiceLevel';
+    // Multi-restaurant cart allowed.
+    // If clearExisting is true, remove lines only for the provided restaurant.
+    if (clearExisting) {
+      _lines.removeWhere((_, line) => line.restaurantName == restaurantName);
+    }
+
+    final key =
+        '${restaurantName}|${item.id}|$size|${toppings.join(',')}|$spiceLevel';
     final existing = _lines[key];
+
+
 
     if (existing != null) {
       existing.qty += quantity;
