@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../data/grocery_data.dart';
 import '../../data/restaurants_data.dart';
 import '../../models/food_order.dart';
 import '../../models/menu_item.dart';
+import '../../models/payment_method.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/mart_cart_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/past_order_tile.dart';
@@ -92,13 +95,13 @@ class OrdersScreen extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              CircleAvatar(backgroundColor: accent.withOpacity(0.12), child: Icon(Icons.delivery_dining_rounded, color: accent)),
+              CircleAvatar(backgroundColor: accent.withValues(alpha: 0.12), child: Icon(order.isMart ? Icons.shopping_bag_rounded : Icons.delivery_dining_rounded, color: accent)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(order.restaurantName, style: const TextStyle(fontWeight: FontWeight.w800)),
+                    Text(order.vendorSummary, style: const TextStyle(fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
                     Text(orderState.statusLabel, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
                   ],
@@ -117,7 +120,7 @@ class OrdersScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withOpacity(0.15)),
+          LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withValues(alpha: 0.15)),
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -132,6 +135,22 @@ class OrdersScreen extends StatelessWidget {
   }
 
   void _reorderOrder(BuildContext context, FoodOrder order) {
+    if (order.isMart) {
+      final mart = context.read<MartCartProvider>();
+      mart.clear();
+      for (final itemName in order.items) {
+        for (final g in allGroceryItems) {
+          if (g.name == itemName) {
+            mart.add(g);
+            break;
+          }
+        }
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mart order rebuilt in your cart.')),
+      );
+      return;
+    }
     final cart = context.read<CartProvider>();
     cart.clear();
     final restaurant = allRestaurants.firstWhere(
@@ -171,13 +190,29 @@ class OrdersScreen extends StatelessWidget {
             children: [
               Text('Order ID: ${order.id}'),
               const SizedBox(height: 6),
-              Text('Restaurant: ${order.restaurantName}'),
+              Text('${order.isMart ? 'Store' : 'Restaurant'}: ${order.vendorNames.join(', ')}'),
               const SizedBox(height: 6),
               Text('Delivered to: ${order.deliveryAddress}'),
               const SizedBox(height: 6),
-              Text('Items: ${order.itemsSummary}'),
-              const SizedBox(height: 6),
-              Text('Total: ₹${order.total}'),
+              Text('Payment: ${PaymentMethods.byId(order.paymentMode).label}'),
+              const Divider(),
+              if (order.subtotal > 0) ...[
+                _invoiceRow('Subtotal', order.subtotal),
+                if (order.taxes > 0) _invoiceRow('GST', order.taxes),
+                if (order.deliveryFee > 0) _invoiceRow('Delivery', order.deliveryFee),
+                if (order.packingFee > 0) _invoiceRow(order.isMart ? 'Handling' : 'Packaging', order.packingFee),
+                if (order.discount > 0) _invoiceRow('Discount', -order.discount),
+                if (order.tip > 0) _invoiceRow('Tip', order.tip),
+                const Divider(),
+              ] else
+                Text('Items: ${order.itemsSummary}'),
+              Row(
+                children: [
+                  const Text('Total', style: TextStyle(fontWeight: FontWeight.w900)),
+                  const Spacer(),
+                  Text('₹${order.total}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -185,6 +220,19 @@ class OrdersScreen extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+
+  Widget _invoiceRow(String label, int amount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: AppColors.muted)),
+          const Spacer(),
+          Text(amount < 0 ? '-₹${-amount}' : '₹$amount'),
+        ],
+      ),
     );
   }
 

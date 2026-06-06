@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:food_rush/models/cart_line.dart';
 import 'package:food_rush/models/menu_item.dart';
+import 'package:food_rush/models/order_line.dart';
 
 class CartProvider extends ChangeNotifier {
   static const _storageKey = 'foodRushCart';
@@ -15,6 +16,7 @@ class CartProvider extends ChangeNotifier {
   int tip = 0;
   String specialInstructions = '';
   String deliveryInstructions = '';
+  String paymentMode = 'upi';
 
   CartProvider() {
     _restoreCart();
@@ -22,6 +24,44 @@ class CartProvider extends ChangeNotifier {
 
   List<CartLine> get lines => _lines.values.toList();
   int get count => lines.fold<int>(0, (sum, l) => sum + l.qty);
+
+  /// Distinct restaurants present in the cart (multi-restaurant support).
+  List<String> get vendorNames {
+    final seen = <String>[];
+    for (final line in lines) {
+      if (!seen.contains(line.restaurantName)) seen.add(line.restaurantName);
+    }
+    return seen;
+  }
+
+  bool get isMultiVendor => vendorNames.length > 1;
+
+  /// Cart lines grouped by restaurant, in insertion order.
+  Map<String, List<CartLine>> get linesByVendor {
+    final map = <String, List<CartLine>>{};
+    for (final line in lines) {
+      map.putIfAbsent(line.restaurantName, () => []).add(line);
+    }
+    return map;
+  }
+
+  /// Flattened structured lines used when placing an order.
+  List<OrderLine> get orderLines {
+    return lines.map((line) {
+      final opts = <String>[];
+      if (line.size != 'Regular') opts.add(line.size);
+      if (line.spiceLevel.isNotEmpty) opts.add('${line.spiceLevel} spice');
+      if (line.toppings.isNotEmpty) opts.add(line.toppings.join(', '));
+      return OrderLine(
+        name: line.item.name,
+        vendor: line.restaurantName,
+        qty: line.qty,
+        unitPrice: line.unitPrice,
+        options: opts.join(' • '),
+      );
+    }).toList();
+  }
+
   int get subtotal => lines.fold<int>(0, (sum, l) => sum + l.lineTotal);
   int get gst => (subtotal * 0.05).round();
   int get deliveryFee => subtotal > 0 ? 35 : 0;
@@ -106,6 +146,12 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPaymentMode(String mode) {
+    paymentMode = mode;
+    _saveCart();
+    notifyListeners();
+  }
+
   void cleanForMode(String mode) {
     _lines.removeWhere((_, line) => line.item.diet != mode);
     _saveCart();
@@ -119,6 +165,7 @@ class CartProvider extends ChangeNotifier {
     tip = 0;
     specialInstructions = '';
     deliveryInstructions = '';
+    paymentMode = 'upi';
     _saveCart();
     notifyListeners();
   }
@@ -141,6 +188,7 @@ class CartProvider extends ChangeNotifier {
       tip = data['tip'] as int? ?? 0;
       specialInstructions = data['specialInstructions'] as String? ?? '';
       deliveryInstructions = data['deliveryInstructions'] as String? ?? '';
+      paymentMode = data['paymentMode'] as String? ?? 'upi';
       notifyListeners();
     } catch (_) {
       // ignore malformed cart state
@@ -156,6 +204,7 @@ class CartProvider extends ChangeNotifier {
       'tip': tip,
       'specialInstructions': specialInstructions,
       'deliveryInstructions': deliveryInstructions,
+      'paymentMode': paymentMode,
     };
     await prefs.setString(_storageKey, jsonEncode(data));
   }

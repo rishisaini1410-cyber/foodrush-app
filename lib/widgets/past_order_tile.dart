@@ -59,12 +59,25 @@ class PastOrderTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      order.restaurantName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            order.vendorSummary,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                        if (order.isMart) ...[
+                          const SizedBox(width: 6),
+                          _badge('Mart', accent),
+                        ] else if (order.isMultiVendor) ...[
+                          const SizedBox(width: 6),
+                          _badge('${order.vendorNames.length} stores', accent),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -116,7 +129,7 @@ class PastOrderTile extends StatelessWidget {
                   OutlinedButton(
                     onPressed: onInvoice,
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: accent.withOpacity(0.3)),
+                      side: BorderSide(color: accent.withValues(alpha: 0.3)),
                     ),
                     child: const Text('Invoice'),
                   ),
@@ -124,6 +137,20 @@ class PastOrderTile extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _badge(String text, Color accent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: accent, fontSize: 10, fontWeight: FontWeight.w800),
       ),
     );
   }
