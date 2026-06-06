@@ -1,44 +1,40 @@
 # Food Rush — 100% Upgrade Roadmap
 
 ## Step 0: Current state audit (done/observed)
-- Modes: `food` + `rushmart` already exist via `AppProvider.serviceMode`.
-- Cart:
-  - `CartProvider` (food) currently **prevents mixing restaurants**.
-  - `MartCartProvider` exists but full rushmart checkout flow not verified yet.
-- Orders/Tracking:
-  - `OrderProvider` supports **only one active order** (`activeOrder`).
-  - `TrackingScreen` + `OrdersScreen` are single-order UIs.
+- Cart (food): supports multi-restaurant lines already.
+- Cart checkout (`CartScreen`) currently:
+  - creates *multiple* `FoodOrder` (one per restaurant group)
+  - but only **first order** is set as `OrderProvider.activeOrder` for tracking.
+- Orders/Tracking UI:
+  - `OrderProvider` supports only **single active order**.
+  - `TrackingScreen` and `OrdersScreen` show only one active order.
+- Payment UI: currently missing (Proceed button mocks delay + creates orders).
+- Address: displayed from `LocationProvider.displayAddress`, but no explicit step for address/payment selection.
 
-## Step 1: Multi-restaurant cart + partner assignment logic (must)
-- [x] Remove/replace restaurant-mixing restriction in `CartProvider`.
-- [x] Place multi-restaurant cart checkout creates one `FoodOrder` per restaurant group (UI/fees distribution MVP).
-- [ ] Define “same location => same partner” rule at checkout.
+## Step 1 (MUST): Checkout UX + Payment method selection
+- [ ] Add payment method selection UI (UPI/COD/Card mock) on `CartScreen`.
+- [ ] Pass chosen `paymentMethod` into order model / persist in placed order.
 
+## Step 2 (MUST): Delivery address selection step
+- [ ] Add an “Address” chooser UI in checkout using `LocationProvider` (current + saved locations).
+- [ ] Ensure chosen address is used when creating orders.
 
-## Step 2: Multi-order placement (must)
-- [ ] Upgrade order model to support multiple concurrent orders in a single checkout.
-- [ ] Upgrade `OrderProvider` to manage multiple active orders (or per-restaurant order list).
-- [ ] Update checkout to create one order per restaurant group.
+## Step 3 (MUST): Multi-order placement + multi-order tracking
+- [ ] Extend `FoodOrder` to include `paymentMethod` and richer status fields if needed.
+- [ ] Upgrade `OrderProvider` to track **List<FoodOrder> activeOrders** instead of a single `activeOrder`.
+- [ ] Upgrade persistence (restore/save active orders list).
+- [ ] Update `TrackingScreen` to show all active orders as cards/list.
+- [ ] Update `OrdersScreen` active section accordingly (list + track buttons).
 
-## Step 3: Multi-order tracking UI (must)
-- [ ] Update `TrackingScreen` to show list/cards of active orders.
-- [ ] Update `OrdersScreen` active section accordingly.
+## Step 4: Partner assignment logic (same location => same partner)
+- [ ] Add partnerId/partnerName + rules stub based on delivery address (mock).
 
-## Step 4: RushMart end-to-end flow
-- [ ] Build RushMart cart + checkout + order success + tracking integration.
+## Step 5: RushMart end-to-end flow
+- [ ] Verify `MartCartProvider` checkout creates orders and shows tracking.
 
-## Step 5: Help + Chat support
-- [ ] Add `SupportScreen` + `ChatScreen`.
-
-## Step 6: Settings + About App
-- [ ] Add `SettingsScreen` with About App, Terms/Privacy placeholders, Support shortcuts.
-
-## Step 7: UI/animations polish
-- [ ] Cart add animation, checkout success animation, tracking stage animation.
-
-## Step 8: Testing checklist
-- [ ] Multi-restaurant cart: add items from 2 restaurants; ensure no crash; correct grouping.
-- [ ] Multi-order: place order; verify both orders created and shown in tracking.
-- [ ] RushMart: add items; checkout; verify order history.
-- [ ] Support: open chat; send messages (mock locally if backend not ready).
+## Step 6: Testing checklist
+- [ ] Multi-restaurant: add items from 2 restaurants -> place order -> verify both orders created.
+- [ ] Multi-order tracking: both appear in Tracking UI.
+- [ ] Payment selection: chosen payment method persists and shows in invoice/active card.
+- [ ] Address selection: selected address used in created orders.
 

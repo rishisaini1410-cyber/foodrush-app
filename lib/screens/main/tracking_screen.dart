@@ -24,18 +24,23 @@ class TrackingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (!orderState.hasOrder)
+            if (!orderState.hasOrders)
               const Expanded(
                 child: Center(
                   child: Text('Koi active order nahi hai.', style: TextStyle(color: AppColors.muted)),
                 ),
               )
             else ...[
-              Text('Current status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+
+              Text('Live status', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.line)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.line),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -45,6 +50,13 @@ class TrackingScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withOpacity(0.15)),
                     const SizedBox(height: 18),
+                    const Text('Your active orders', style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 12),
+                    ...orderState.activeOrders.map((o) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _orderMiniCard(o, accent),
+                        )),
+                    const SizedBox(height: 4),
                     const Text('Delivery route', style: TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     _MapProgress(progress: orderState.progress, accent: accent),
@@ -61,6 +73,7 @@ class TrackingScreen extends StatelessWidget {
                   ],
                 ),
               ),
+
             ],
           ],
         ),
@@ -145,3 +158,42 @@ Widget _stageDot(String label, bool active, Color accent) {
     ],
   );
 }
+
+class _orderMiniCard extends StatelessWidget {
+  final dynamic o;
+  final Color accent;
+
+  const _orderMiniCard(this.o, this.accent);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.paper,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.delivery_dining_rounded, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(o.restaurantName as String, style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text('Partner: ${o.partnerName}', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+                Text('Payment: ${o.paymentMethod}', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          Text('₹${o.total}', style: TextStyle(color: accent, fontWeight: FontWeight.w900)),
+        ],
+      ),
+    );
+  }
+}
+

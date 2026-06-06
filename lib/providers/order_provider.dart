@@ -7,21 +7,23 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/food_order.dart';
 
 class OrderProvider extends ChangeNotifier {
-  static const _activeOrderKey = 'foodRushActiveOrder';
-  static const _startedAtKey = 'foodRushActiveOrderStartedAt';
+  static const _activeOrdersKey = 'foodRushActiveOrders';
+  static const _startedAtKey = 'foodRushActiveOrdersStartedAt';
 
-  FoodOrder? activeOrder;
-  int elapsedSeconds = 0;
+  /// MVP: single timeline for all active orders created in one checkout.
+  /// Each order still shows its own status but progression is shared.
+  final List<FoodOrder> activeOrders = [];
   DateTime? _startedAt;
+  int elapsedSeconds = 0;
   Timer? _timer;
   bool _feedbackShown = false;
 
   OrderProvider() {
-    _restoreActiveOrder();
+    _restoreActiveOrders();
   }
 
-  bool get hasOrder => activeOrder != null;
-  bool get isDelivered => activeOrder?.status == 'Delivered';
+  bool get hasOrders => activeOrders.isNotEmpty;
+
   double get progress => (elapsedSeconds / 60).clamp(0, 1);
 
   String get statusLabel {
@@ -47,23 +49,32 @@ class OrderProvider extends ChangeNotifier {
     return 'Delivered';
   }
 
-  Future<void> _restoreActiveOrder() async {
+  Future<void> _restoreActiveOrders() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_activeOrderKey);
+    final raw = prefs.getString(_activeOrdersKey);
     final started = prefs.getString(_startedAtKey);
     if (raw == null || started == null) return;
 
-    final order = FoodOrder.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    final orders = decoded
+        .map((e) => FoodOrder.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+
     final startDate = DateTime.tryParse(started);
     if (startDate == null) return;
 
     final elapsed = DateTime.now().difference(startDate).inSeconds;
-    activeOrder = order;
+    activeOrders
+      ..clear()
+      ..addAll(orders);
+
     _startedAt = startDate;
     elapsedSeconds = elapsed.clamp(0, 60);
 
     if (elapsedSeconds >= 60) {
-      activeOrder = activeOrder?.copyWith(status: 'Delivered');
+      for (var i = 0; i < activeOrders.length; i++) {
+        activeOrders[i] = activeOrders[i].copyWith(status: 'Delivered');
+      }
       _feedbackShown = true;
       await _saveState();
       notifyListeners();
@@ -74,11 +85,18 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> placeOrder(FoodOrder order) async {
-    activeOrder = order.copyWith(status: 'Placed');
+  Future<void> placeOrders(List<FoodOrder> orders) async {
+    final now = DateTime.now();
+    final placed = orders.map((o) => o.copyWith(status: 'Placed')).toList();
+
+    activeOrders
+      ..clear()
+      ..addAll(placed);
+
     elapsedSeconds = 0;
-    _startedAt = DateTime.now();
+    _startedAt = now;
     _feedbackShown = false;
+
     await _saveState();
     _startTimer();
     notifyListeners();
@@ -90,7 +108,9 @@ class OrderProvider extends ChangeNotifier {
       elapsedSeconds += 1;
       if (elapsedSeconds >= 60) {
         elapsedSeconds = 60;
-        activeOrder = activeOrder?.copyWith(status: 'Delivered');
+        for (var i = 0; i < activeOrders.length; i++) {
+          activeOrders[i] = activeOrders[i].copyWith(status: 'Delivered');
+        }
         await _saveState();
         notifyListeners();
         _timer?.cancel();
@@ -106,30 +126,39 @@ class OrderProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool get shouldShowFeedback => isDelivered && !_feedbackShown;
+  bool get shouldShowFeedback {
+    final anyDelivered = activeOrders.any((o) => o.status == 'Delivered');
+    return anyDelivered && !_feedbackShown;
+  }
 
-  Future<void> clearOrder() async {
-    activeOrder = null;
+  Future<void> clearOrders() async {
+    activeOrders.clear();
     elapsedSeconds = 0;
     _feedbackShown = false;
     _timer?.cancel();
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_activeOrderKey);
+    await prefs.remove(_activeOrdersKey);
     await prefs.remove(_startedAtKey);
     notifyListeners();
   }
 
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
-    if (activeOrder == null) {
-      await prefs.remove(_activeOrderKey);
+    if (activeOrders.isEmpty) {
+      await prefs.remove(_activeOrdersKey);
       await prefs.remove(_startedAtKey);
       return;
     }
-    await prefs.setString(_activeOrderKey, jsonEncode(activeOrder!.toJson()));
+
+    await prefs.setString(
+      _activeOrdersKey,
+      jsonEncode(activeOrders.map((o) => o.toJson()).toList()),
+    );
     await prefs.setString(
       _startedAtKey,
       _startedAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
     );
   }
 }
+

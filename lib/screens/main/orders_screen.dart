@@ -19,9 +19,11 @@ class OrdersScreen extends StatelessWidget {
     final orderState = context.watch<OrderProvider>();
     final profile = context.watch<ProfileProvider>();
     final accent = Theme.of(context).colorScheme.primary;
-    final activeOrder = orderState.activeOrder;
+    final activeOrders = orderState.activeOrders;
 
-    if (orderState.shouldShowFeedback && activeOrder != null) {
+    if (orderState.shouldShowFeedback && activeOrders.isNotEmpty) {
+
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
           _showFeedbackDialog(context, orderState);
@@ -39,10 +41,11 @@ class OrdersScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (activeOrder != null) ...[
-            _activeOrderCard(context, orderState, accent),
+          if (activeOrders.isNotEmpty) ...[
+            ...activeOrders.map((o) => _activeOrderCard(context, orderState, accent, o)).toList(),
             const SizedBox(height: 20),
           ],
+
           const Text('Order history', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           if (profile.pastOrdersSorted.isEmpty)
@@ -76,8 +79,8 @@ class OrdersScreen extends StatelessWidget {
     );
   }
 
-  Widget _activeOrderCard(BuildContext context, OrderProvider orderState, Color accent) {
-    final order = orderState.activeOrder!;
+  Widget _activeOrderCard(BuildContext context, OrderProvider orderState, Color accent, FoodOrder order) {
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -118,6 +121,7 @@ class OrdersScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withOpacity(0.15)),
+
           const SizedBox(height: 14),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

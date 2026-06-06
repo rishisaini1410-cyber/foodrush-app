@@ -190,11 +190,11 @@ class _CartScreenState extends State<CartScreen> {
                                   .read<LocationProvider>()
                                   .setLastOrderAddress(loc.displayAddress);
 
-                              // MVP: place the first order as the active tracking order.
-                              // Next step will upgrade multi-order tracking.
                               if (orders.isNotEmpty) {
-                                await context.read<OrderProvider>().placeOrder(orders.first);
+                                // Place all restaurant-group orders as active orders for tracking.
+                                await context.read<OrderProvider>().placeOrders(orders);
                               }
+
 
                               cart.clear();
                               if (!mounted) return;
