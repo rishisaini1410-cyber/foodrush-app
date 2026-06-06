@@ -16,6 +16,7 @@ import '../../widgets/popular_restaurant_card.dart';
 import '../../widgets/restaurant_card.dart';
 import '../../widgets/rush_mart_section.dart';
 import '../main/cart_screen.dart';
+import '../main/mart_cart_screen.dart';
 import '../profile/profile_screen.dart';
 import '../restaurant/restaurant_screen.dart';
 
@@ -452,8 +453,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? (mart.count == 0
                           ? null
                           : () {
-                              mart.clear();
                               Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => const MartCartScreen()),
+                              );
                             })
                       : (cart.count == 0
                           ? null

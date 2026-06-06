@@ -6,6 +6,8 @@ import '../../providers/app_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../widgets/past_order_tile.dart';
 import '../../widgets/scratch_voucher_card.dart';
+import '../settings/settings_screen.dart';
+import '../support/help_support_screen.dart';
 import 'past_orders_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -49,6 +51,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         backgroundColor: AppColors.paper,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
@@ -97,6 +109,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: _showVouchers
                 ? _VouchersList(profile: profile, accent: accent)
                 : null,
+          ),
+          _MenuTile(
+            icon: Icons.settings_rounded,
+            title: 'Settings',
+            subtitle: 'Preferences, notifications & account',
+            accent: accent,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+          _MenuTile(
+            icon: Icons.help_center_rounded,
+            title: 'Help & Support',
+            subtitle: 'FAQs, contact us & raise a ticket',
+            accent: accent,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+            ),
           ),
           const SizedBox(height: 20),
           Row(

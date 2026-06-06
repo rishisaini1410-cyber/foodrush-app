@@ -43,7 +43,7 @@ class TrackingScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(orderState.statusLabel, style: const TextStyle(color: AppColors.muted)),
                     const SizedBox(height: 18),
-                    LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withOpacity(0.15)),
+                    LinearProgressIndicator(value: orderState.progress, color: accent, backgroundColor: accent.withValues(alpha: 0.15)),
                     const SizedBox(height: 18),
                     const Text('Delivery route', style: TextStyle(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
@@ -112,7 +112,7 @@ class _MapProgress extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: accent,
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: accent.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                        boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
                       ),
                       child: const Icon(Icons.delivery_dining_rounded, color: Colors.white, size: 20),
                     ),
